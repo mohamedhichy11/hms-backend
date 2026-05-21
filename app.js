@@ -1,4 +1,3 @@
-// app.js
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -11,13 +10,32 @@ import postAppointment from "./router/appointmentRouter.js";
 
 const app = express();
 
-// ❌ config() removed — dotenv is loaded in server.js BEFORE this file imports
+// ✅ FIX 1: Handle OPTIONS preflight requests
+app.options("*", cors());
 
+// ✅ FIX 2: Correct CORS config — "methods" not "method"
 app.use(
   cors({
-    origin: [process.env.FRONTEND_URL, process.env.DASHBOARD_URL],
-    method: ["GET", "POST", "DELETE", "PUT"],
+    origin: function (origin, callback) {
+      const allowedOrigins = [
+        process.env.FRONTEND_URL,
+        process.env.DASHBOARD_URL,
+        "http://localhost:5173",
+        "http://localhost:5174",
+      ].filter(Boolean);
+
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS: " + origin));
+      }
+    },
+    methods: ["GET", "POST", "DELETE", "PUT", "OPTIONS"], // ✅ "methods" not "method"
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   })
 );
 
