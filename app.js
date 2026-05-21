@@ -10,32 +10,37 @@ import postAppointment from "./router/appointmentRouter.js";
 
 const app = express();
 
-// ✅ FIX 1: Handle OPTIONS preflight requests
-app.options("*", cors());
+const allowedOrigins = [
+  "https://hms-frontend-bice-xi.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:5174",
+];
 
-// ✅ FIX 2: Correct CORS config — "methods" not "method"
+// ✅ Handle preflight OPTIONS requests first
+app.options("*", (req, res) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.sendStatus(204);
+});
+
+// ✅ CORS middleware — exact origin, not wildcard
 app.use(
   cors({
     origin: function (origin, callback) {
-      const allowedOrigins = [
-        process.env.FRONTEND_URL,
-        process.env.DASHBOARD_URL,
-        "http://localhost:5173",
-        "http://localhost:5174",
-      ].filter(Boolean);
-
-      // Allow requests with no origin (mobile apps, curl, etc.)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, origin || true);
       } else {
-        callback(new Error("Not allowed by CORS: " + origin));
+        callback(new Error("CORS not allowed for: " + origin));
       }
     },
-    methods: ["GET", "POST", "DELETE", "PUT", "OPTIONS"], // ✅ "methods" not "method"
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
